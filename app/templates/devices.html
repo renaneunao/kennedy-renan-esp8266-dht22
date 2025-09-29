@@ -1,0 +1,308 @@
+{% extends "base.html" %}
+
+{% block title %}Dispositivos - ESP8266 DHT22 Monitor{% endblock %}
+{% block page_title %}Gerenciar Dispositivos{% endblock %}
+{% block page_description %}Configure e gerencie seus sensores IoT{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header com botão de adicionar -->
+    <div class="flex justify-between items-center">
+        <div>
+            <h3 class="text-lg font-semibold text-gray-900">Dispositivos Conectados</h3>
+            <p class="text-sm text-gray-600">Gerencie seus sensores e configure suas informações</p>
+        </div>
+        <button onclick="showAddDeviceModal()" 
+                class="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200">
+            <i class="fas fa-plus mr-2"></i>
+            Adicionar Dispositivo
+        </button>
+    </div>
+
+    <!-- Grid de dispositivos -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for device in devices %}
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow duration-200">
+            <!-- Header do card -->
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center">
+                    <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                        <i class="fas fa-microchip text-blue-600"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold text-gray-900">{{ device.name }}</h4>
+                        <p class="text-sm text-gray-600">{{ device.device_id }}</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <span class="px-2 py-1 text-xs rounded-full {% if device.is_active %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
+                        {% if device.is_active %}Ativo{% else %}Inativo{% endif %}
+                    </span>
+                    <button onclick="editDevice('{{ device.device_id }}')" 
+                            class="text-gray-400 hover:text-blue-600 transition-colors duration-200">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Informações do dispositivo -->
+            <div class="space-y-2 mb-4">
+                <div class="flex items-center text-sm text-gray-600">
+                    <i class="fas fa-map-marker-alt mr-2"></i>
+                    <span>{{ device.location or 'Localização não definida' }}</span>
+                </div>
+                {% if device.description %}
+                <div class="flex items-start text-sm text-gray-600">
+                    <i class="fas fa-info-circle mr-2 mt-0.5"></i>
+                    <span>{{ device.description }}</span>
+                </div>
+                {% endif %}
+                <div class="flex items-center text-sm text-gray-600">
+                    <i class="fas fa-clock mr-2"></i>
+                    <span>Criado em {{ device.created_at.strftime('%d/%m/%Y') }}</span>
+                </div>
+            </div>
+
+            <!-- Últimos dados -->
+            <div class="border-t border-gray-200 pt-4">
+                <div class="flex justify-between items-center">
+                    <span class="text-sm text-gray-600">Última leitura:</span>
+                    <span class="text-sm font-medium text-gray-900" id="last-reading-{{ device.device_id }}">
+                        Carregando...
+                    </span>
+                </div>
+            </div>
+
+            <!-- Ações -->
+            <div class="flex space-x-2 mt-4">
+                <a href="{{ url_for('device_detail', device_id=device.device_id) }}" 
+                   class="flex-1 text-center px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors duration-200">
+                    <i class="fas fa-chart-line mr-1"></i>
+                    Ver Dados
+                </a>
+                <button onclick="toggleDevice('{{ device.device_id }}', {{ device.is_active|lower }})" 
+                        class="px-3 py-2 text-sm {% if device.is_active %}bg-red-100 text-red-700 hover:bg-red-200{% else %}bg-green-100 text-green-700 hover:bg-green-200{% endif %} rounded-lg transition-colors duration-200">
+                    <i class="fas {% if device.is_active %}fa-pause{% else %}fa-play{% endif %}"></i>
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Mensagem quando não há dispositivos -->
+    {% if not devices %}
+    <div class="text-center py-12">
+        <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <i class="fas fa-microchip text-gray-400 text-2xl"></i>
+        </div>
+        <h3 class="text-lg font-semibold text-gray-900 mb-2">Nenhum dispositivo encontrado</h3>
+        <p class="text-gray-600 mb-4">Adicione dispositivos para começar o monitoramento</p>
+        <button onclick="showAddDeviceModal()" 
+                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200">
+            <i class="fas fa-plus mr-2"></i>
+            Adicionar Primeiro Dispositivo
+        </button>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal para adicionar/editar dispositivo -->
+<div id="device-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+        <div class="p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900" id="modal-title">Adicionar Dispositivo</h3>
+                <button onclick="hideDeviceModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <form id="device-form" onsubmit="saveDevice(event)">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">ID do Dispositivo</label>
+                        <input type="text" id="device-id" name="device_id" required
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                               placeholder="ESP8266_001">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Nome</label>
+                        <input type="text" id="device-name" name="name" required
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                               placeholder="Sensor Sala">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Localização</label>
+                        <input type="text" id="device-location" name="location"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                               placeholder="Sala de estar">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Descrição</label>
+                        <textarea id="device-description" name="description" rows="3"
+                                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                  placeholder="Sensor de temperatura e umidade na sala de estar"></textarea>
+                    </div>
+                    
+                    <div>
+                        <label class="flex items-center">
+                            <input type="checkbox" id="device-active" name="is_active" 
+                                   class="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-2">
+                            <span class="ml-2 text-sm text-gray-300">Dispositivo ativo</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="flex justify-end space-x-3 mt-6">
+                    <button type="button" onclick="hideDeviceModal()" 
+                            class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors duration-200">
+                        Cancelar
+                    </button>
+                    <button type="submit" 
+                            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200">
+                        Salvar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Carregar dados dos dispositivos
+document.addEventListener('DOMContentLoaded', function() {
+    loadDeviceData();
+});
+
+function loadDeviceData() {
+    // Carregar últimos dados de cada dispositivo
+    {% for device in devices %}
+    loadDeviceLastReading('{{ device.device_id }}');
+    {% endfor %}
+}
+
+function loadDeviceLastReading(deviceId) {
+    fetch(`/api/sensor-data/latest?device_id=${deviceId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success' && data.data.length > 0) {
+                const latest = data.data[0];
+                const element = document.getElementById(`last-reading-${deviceId}`);
+                if (element) {
+                    const timestamp = new Date(latest.timestamp);
+                    element.textContent = timestamp.toLocaleString('pt-BR');
+                }
+            } else {
+                const element = document.getElementById(`last-reading-${deviceId}`);
+                if (element) {
+                    element.textContent = 'Nenhum dado';
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao carregar dados do dispositivo:', error);
+        });
+}
+
+function showAddDeviceModal() {
+    document.getElementById('device-modal').classList.remove('hidden');
+    document.getElementById('device-modal').classList.add('flex');
+    document.getElementById('modal-title').textContent = 'Adicionar Dispositivo';
+    document.getElementById('device-form').reset();
+}
+
+function editDevice(deviceId) {
+    // Buscar dados do dispositivo
+    fetch(`/api/devices/${deviceId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                const device = data.data;
+                document.getElementById('device-id').value = device.device_id;
+                document.getElementById('device-name').value = device.name;
+                document.getElementById('device-location').value = device.location || '';
+                document.getElementById('device-description').value = device.description || '';
+                document.getElementById('device-active').checked = device.is_active;
+                
+                document.getElementById('modal-title').textContent = 'Editar Dispositivo';
+                document.getElementById('device-modal').classList.remove('hidden');
+                document.getElementById('device-modal').classList.add('flex');
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao carregar dados do dispositivo:', error);
+            alert('Erro ao carregar dados do dispositivo: ' + error.message);
+        });
+}
+
+function hideDeviceModal() {
+    document.getElementById('device-modal').classList.add('hidden');
+    document.getElementById('device-modal').classList.remove('flex');
+}
+
+function saveDevice(event) {
+    event.preventDefault();
+    
+    const formData = new FormData(event.target);
+    const deviceId = formData.get('device_id');
+    
+    const data = {
+        name: formData.get('name'),
+        location: formData.get('location'),
+        description: formData.get('description'),
+        is_active: document.getElementById('device-active').checked
+    };
+    
+    fetch(`/api/devices/${deviceId}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            alert('Dispositivo atualizado com sucesso!');
+            location.reload();
+        } else {
+            alert('Erro ao salvar dispositivo: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Erro ao salvar dispositivo:', error);
+        alert('Erro ao salvar dispositivo: ' + error.message);
+    });
+}
+
+function toggleDevice(deviceId, isActive) {
+    fetch(`/api/devices/${deviceId}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            is_active: !isActive
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            location.reload();
+        } else {
+            alert('Erro ao alterar status do dispositivo: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Erro ao alterar status do dispositivo:', error);
+        alert('Erro ao alterar status do dispositivo');
+    });
+}
+</script>
+{% endblock %}
+

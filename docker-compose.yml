@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    container_name: esp8266-monitor-app
+    ports:
+      - "5005:5005"
+    environment:
+      - FLASK_ENV=production
+      - SECRET_KEY=${SECRET_KEY:-dev-secret-key-change-in-production}
+      - DATABASE_URL=sqlite:///app/database/sensor_data.db
+    volumes:
+      - ./app/database:/app/database
+      - ./app/logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5005/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - esp8266-network
+
+  nginx:
+    image: nginx:alpine
+    container_name: esp8266-monitor-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - app
+    restart: unless-stopped
+    networks:
+      - esp8266-network
+
+  # Opcional: Banco de dados PostgreSQL para produção
+  # postgres:
+  #   image: postgres:15-alpine
+  #   container_name: esp8266-monitor-db
+  #   environment:
+  #     - POSTGRES_DB=esp8266_monitor
+  #     - POSTGRES_USER=esp8266_user
+  #     - POSTGRES_PASSWORD=${DB_PASSWORD:-change-me}
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #     - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+  #   restart: unless-stopped
+  #   networks:
+  #     - esp8266-network
+
+  # Opcional: Redis para cache
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: esp8266-monitor-redis
+  #   volumes:
+  #     - redis_data:/data
+  #   restart: unless-stopped
+  #   networks:
+  #     - esp8266-network
+
+networks:
+  esp8266-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+

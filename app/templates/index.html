@@ -1,0 +1,266 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - ESP8266 DHT22 Monitor{% endblock %}
+{% block page_title %}Dashboard Principal{% endblock %}
+{% block page_description %}Visão geral dos sensores e dados em tempo real{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Cards de Status dos Dispositivos -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {% for device in devices %}
+        <div class="bg-gray-800 rounded-lg shadow-lg border border-gray-700 p-6 hover:shadow-xl transition-shadow duration-200">
+            <!-- Header do dispositivo -->
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center">
+                    <div class="w-10 h-10 bg-blue-600/20 rounded-lg flex items-center justify-center mr-3">
+                        <i class="fas fa-microchip text-blue-400"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold text-white">{{ device.name }}</h4>
+                        <p class="text-sm text-gray-400">{{ device.location or 'Localização não definida' }}</p>
+                    </div>
+                </div>
+                <div class="flex items-center">
+                    <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse mr-2"></div>
+                    <span class="text-xs text-gray-400">Online</span>
+                </div>
+            </div>
+
+            <!-- Dados atuais -->
+            <div class="space-y-3">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center text-sm text-gray-400">
+                        <i class="fas fa-thermometer-half mr-2 text-red-400"></i>
+                        <span>Temperatura</span>
+                    </div>
+                    <span class="font-semibold text-white" id="temp-{{ device.device_id }}">--°C</span>
+                </div>
+                
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center text-sm text-gray-400">
+                        <i class="fas fa-tint mr-2 text-blue-400"></i>
+                        <span>Umidade</span>
+                    </div>
+                    <span class="font-semibold text-white" id="humidity-{{ device.device_id }}">--%</span>
+                </div>
+                
+                <div class="flex items-center justify-between text-xs text-gray-500">
+                    <span>Última atualização</span>
+                    <span id="timestamp-{{ device.device_id }}">--</span>
+                </div>
+            </div>
+
+            <!-- Ações -->
+            <div class="mt-4 pt-4 border-t border-gray-700">
+                <a href="{{ url_for('device_detail', device_id=device.device_id) }}" 
+                   class="w-full text-center block px-3 py-2 text-sm bg-blue-600/20 text-blue-400 rounded-lg hover:bg-blue-600/30 transition-colors duration-200">
+                    <i class="fas fa-chart-line mr-1"></i>
+                    Ver Detalhes
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Estatísticas Gerais -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Estatísticas de Temperatura -->
+        <div class="bg-gray-800 rounded-lg shadow-lg border border-gray-700 p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-white">
+                    <i class="fas fa-thermometer-half text-red-400 mr-2"></i>
+                    Estatísticas de Temperatura
+                </h3>
+                <span class="text-sm text-gray-400">Últimas 24h</span>
+            </div>
+            
+            <div class="grid grid-cols-3 gap-4">
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-white" id="avg-temp">--°C</div>
+                    <div class="text-sm text-gray-400">Média</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-red-400" id="max-temp">--°C</div>
+                    <div class="text-sm text-gray-400">Máxima</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-blue-400" id="min-temp">--°C</div>
+                    <div class="text-sm text-gray-400">Mínima</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Estatísticas de Umidade -->
+        <div class="bg-gray-800 rounded-lg shadow-lg border border-gray-700 p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-white">
+                    <i class="fas fa-tint text-blue-400 mr-2"></i>
+                    Estatísticas de Umidade
+                </h3>
+                <span class="text-sm text-gray-400">Últimas 24h</span>
+            </div>
+            
+            <div class="grid grid-cols-3 gap-4">
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-white" id="avg-humidity">--%</div>
+                    <div class="text-sm text-gray-400">Média</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-green-400" id="max-humidity">--%</div>
+                    <div class="text-sm text-gray-400">Máxima</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-orange-400" id="min-humidity">--%</div>
+                    <div class="text-sm text-gray-400">Mínima</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Informações do Sistema -->
+    <div class="bg-gray-800 rounded-lg shadow-lg border border-gray-700 p-6">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold text-white">
+                <i class="fas fa-info-circle text-blue-400 mr-2"></i>
+                Informações do Sistema
+            </h3>
+            <span id="api-status" class="px-2 py-1 text-xs bg-green-900/50 text-green-400 rounded-full border border-green-700/50">
+                API Online
+            </span>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="text-center">
+                <div class="text-2xl font-bold text-white" id="total-readings">--</div>
+                <div class="text-sm text-gray-400">Total de Leituras</div>
+            </div>
+            <div class="text-center">
+                <div class="text-2xl font-bold text-white">{{ devices|length }}</div>
+                <div class="text-sm text-gray-400">Dispositivos Ativos</div>
+            </div>
+            <div class="text-center">
+                <div class="text-2xl font-bold text-white" id="system-uptime">--</div>
+                <div class="text-sm text-gray-400">Tempo Online</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mensagem quando não há dispositivos -->
+    {% if not devices %}
+    <div class="text-center py-12">
+        <div class="w-16 h-16 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4 border border-gray-700">
+            <i class="fas fa-microchip text-gray-500 text-2xl"></i>
+        </div>
+        <h3 class="text-lg font-semibold text-white mb-2">Nenhum dispositivo conectado</h3>
+        <p class="text-gray-400 mb-4">Configure seus sensores ESP8266 para começar o monitoramento</p>
+        <a href="{{ url_for('devices') }}" 
+           class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200">
+            <i class="fas fa-cog mr-2"></i>
+            Gerenciar Dispositivos
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Atualizar dados a cada 30 segundos
+setInterval(updateData, 30000);
+
+// Carregar dados iniciais
+document.addEventListener('DOMContentLoaded', function() {
+    updateData();
+    updateStats();
+});
+
+function updateData() {
+    // Atualizar dados de cada dispositivo
+    {% for device in devices %}
+    updateDeviceData('{{ device.device_id }}');
+    {% endfor %}
+}
+
+function updateDeviceData(deviceId) {
+    fetch(`/api/sensor-data/latest?device_id=${deviceId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success' && data.data.length > 0) {
+                const latest = data.data[0];
+                
+                // Atualizar elementos específicos do dispositivo
+                const tempElement = document.getElementById(`temp-${deviceId}`);
+                const humidityElement = document.getElementById(`humidity-${deviceId}`);
+                const timestampElement = document.getElementById(`timestamp-${deviceId}`);
+                
+                if (tempElement) {
+                    tempElement.textContent = latest.temperature.toFixed(1) + '°C';
+                    tempElement.classList.add('animate-pulse');
+                    setTimeout(() => tempElement.classList.remove('animate-pulse'), 1000);
+                }
+                
+                if (humidityElement) {
+                    humidityElement.textContent = latest.humidity.toFixed(1) + '%';
+                    humidityElement.classList.add('animate-pulse');
+                    setTimeout(() => humidityElement.classList.remove('animate-pulse'), 1000);
+                }
+                
+                if (timestampElement) {
+                    const timestamp = new Date(latest.timestamp);
+                    timestampElement.textContent = timestamp.toLocaleTimeString('pt-BR');
+                }
+            } else {
+                // Dispositivo sem dados
+                const tempElement = document.getElementById(`temp-${deviceId}`);
+                const humidityElement = document.getElementById(`humidity-${deviceId}`);
+                const timestampElement = document.getElementById(`timestamp-${deviceId}`);
+                
+                if (tempElement) tempElement.textContent = '--°C';
+                if (humidityElement) humidityElement.textContent = '--%';
+                if (timestampElement) timestampElement.textContent = 'Sem dados';
+            }
+        })
+        .catch(error => {
+            console.error(`Erro ao buscar dados do dispositivo ${deviceId}:`, error);
+        });
+}
+
+function updateStats() {
+    fetch('/api/sensor-data/stats')
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                const stats = data.stats;
+                document.getElementById('avg-temp').textContent = stats.temperature.average + '°C';
+                document.getElementById('max-temp').textContent = stats.temperature.maximum + '°C';
+                document.getElementById('min-temp').textContent = stats.temperature.minimum + '°C';
+                
+                document.getElementById('avg-humidity').textContent = stats.humidity.average + '%';
+                document.getElementById('max-humidity').textContent = stats.humidity.maximum + '%';
+                document.getElementById('min-humidity').textContent = stats.humidity.minimum + '%';
+                
+                document.getElementById('total-readings').textContent = stats.total_readings;
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao buscar estatísticas:', error);
+        });
+}
+
+function getTimeAgo(date) {
+    const now = new Date();
+    const diff = now - date;
+    const minutes = Math.floor(diff / 60000);
+    
+    if (minutes < 1) return 'agora';
+    if (minutes < 60) return `${minutes} min atrás`;
+    
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h atrás`;
+    
+    const days = Math.floor(hours / 24);
+    return `${days}d atrás`;
+}
+</script>
+{% endblock %}
