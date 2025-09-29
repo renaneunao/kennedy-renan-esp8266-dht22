@@ -1,0 +1,119 @@
+services:
+  postgres:
+    image: postgres:latest
+    container_name: postgres-container
+    environment:
+      POSTGRES_USER: renaneunao
+      POSTGRES_PASSWORD: Trd7gCatp5XN9QSYZK3i
+      POSTGRES_DB: home-database
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - minha-rede
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:management
+    container_name: rabbitmq-container
+    environment:
+      RABBITMQ_DEFAULT_USER: renaneunao
+      RABBITMQ_DEFAULT_PASS: 5T1tJRckjgp44Bu01uAX
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - minha-rede
+    restart: unless-stopped
+
+  cartoleiro-aero:
+    image: renaneunao/cartoleiro-aero:latest
+    container_name: cartoleiro-aero-container
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: renaneunao
+      RABBITMQ_PASSWORD: 5T1tJRckjgp44Bu01uAX
+      DB_PATH: /app/cartola.db
+    command: gunicorn --bind 0.0.0.0:5000 --workers 4 --threads 2 wsgi:app
+    ports:
+      - "5002:5000"
+    volumes:
+      - ./data/cartola.db:/app/cartola.db
+    networks:
+      - minha-rede
+    restart: unless-stopped
+    depends_on:
+      - rabbitmq
+
+  financas_renan:
+    image: renaneunao/financas_renan:latest
+    container_name: financas-renan-container
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: renaneunao
+      RABBITMQ_PASSWORD: 5T1tJRckjgp44Bu01uAX
+      DB_PATH: /data/financas.db
+    ports:
+      - "8001:8000"
+    volumes:
+      - financas_data:/data
+      - ./entrypoint.sh:/entrypoint.sh
+    entrypoint: /entrypoint.sh
+    networks:
+      - minha-rede
+    restart: unless-stopped
+    depends_on:
+      - rabbitmq
+
+  summit-hotels:
+    image: renaneunao/summit-hotels:latest
+    container_name: summit-hotels-container
+    environment:
+      FLASK_ENV: production
+      FLASK_DEBUG: False
+      SECRET_KEY: summit_hotel_secret_key_2024_production
+      DATABASE_URL: sqlite:///data/summit.db
+      PORT: 5000
+      WORKERS: 4
+      LOG_LEVEL: info
+    ports:
+      - "5005:5000"
+    volumes:
+      - summit_data:/app/data
+    networks:
+      - minha-rede
+    restart: unless-stopped
+
+  esp8266-dht22:
+    image: renaneunao/esp8266-dht22:latest
+    container_name: esp8266-dht22-container
+    environment:
+      FLASK_ENV: production
+      FLASK_DEBUG: False
+      SECRET_KEY: esp8266_dht22_secret_key_2024_production
+      DATABASE_URL: sqlite:///data/sensor_data.db
+      PORT: 5000
+      WORKERS: 4
+      LOG_LEVEL: info
+    ports:
+      - "5006:5000"
+    volumes:
+      - esp8266_data:/app/data
+    networks:
+      - minha-rede
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  rabbitmq_data:
+  financas_data:
+  summit_data:
+  esp8266_data:
+
+networks:
+  minha-rede:

@@ -11,7 +11,7 @@ import random
 from datetime import datetime
 
 # Configurações
-API_URL = "http://localhost:5005/api/sensor-data"
+API_URL = "http://localhost:5006/api/sensor-data"
 
 def generate_sensor_data(device_id):
     """Gera dados simulados do sensor DHT22"""

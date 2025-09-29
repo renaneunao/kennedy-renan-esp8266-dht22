@@ -30,7 +30,7 @@ const char* ssid = "SEU_WIFI_SSID";        // Configure seu WiFi
 const char* password = "SUA_SENHA_WIFI";   // Configure sua senha WiFi
 
 // Configurações do servidor
-const char* serverUrl = "http://194.163.142.108:5005/api/sensor-data";
+const char* serverUrl = "http://194.163.142.108:5006/api/sensor-data";
 const char* apiKey = "esp8266-dht22-key"; // API key para identificação
 
 // Configurações de timing

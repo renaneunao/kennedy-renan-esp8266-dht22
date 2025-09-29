@@ -42,12 +42,12 @@ RUN mkdir -p /app/database /app/logs && \
 USER appuser
 
 # Expor porta
-EXPOSE 5005
+EXPOSE 5000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:5005/api/health || exit 1
+    CMD curl -f http://localhost:5000/api/health || exit 1
 
 # Comando de inicialização
-CMD ["gunicorn", "--bind", "0.0.0.0:5005", "--workers", "4", "--timeout", "120", "--keep-alive", "2", "--max-requests", "1000", "--max-requests-jitter", "100", "app:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "--timeout", "120", "--keep-alive", "2", "--max-requests", "1000", "--max-requests-jitter", "100", "app:app"]
 

@@ -7,7 +7,7 @@ import requests
 import json
 
 # Configurações
-API_URL = "http://localhost:5005/api/devices"
+API_URL = "http://localhost:5006/api/devices"
 
 def test_get_device(device_id):
     """Testa buscar dados de um dispositivo"""
