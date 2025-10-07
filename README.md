@@ -1,21 +1,23 @@
-# ESP8266 DHT22 Monitor - Sistema de Monitoramento IoT
+# ESP8266/ESP32-C3 DHT22 Monitor - Sistema de Monitoramento IoT
 
-Sistema completo de monitoramento de temperatura e umidade usando ESP8266 com sensor DHT22, conectado a uma aplicação web Flask que armazena e visualiza os dados em tempo real.
+Sistema completo de monitoramento de temperatura e umidade usando ESP8266 ou ESP32-C3 com sensor DHT22, conectado a uma aplicação web Flask que armazena e visualiza os dados em tempo real.
 
 ## 📋 Visão Geral
 
-Este projeto consiste em duas partes principais:
+Este projeto consiste em três partes principais:
 
 1. **Aplicação Web Flask** - Interface web para visualização dos dados
-2. **Código ESP8266** - Firmware para coleta e envio de dados do sensor DHT22
+2. **Código ESP8266** - Firmware para ESP8266 com sensor DHT22
+3. **Código ESP32-C3** - Firmware avançado para ESP32-C3 com OLED e configuração web
 
 ## 🏗️ Arquitetura
 
 ```
-ESP8266 + DHT22 → WiFi → Flask API → SQLite → Interface Web
+ESP8266/ESP32-C3 + DHT22 → WiFi → Flask API → SQLite → Interface Web
 ```
 
-- **ESP8266**: Coleta dados do sensor DHT22 a cada 1 minuto (configurável)
+- **ESP8266**: Coleta dados do sensor DHT22 (configuração hardcoded)
+- **ESP32-C3**: Coleta dados com OLED 0.96" e configuração web completa
 - **Flask API**: Recebe dados via HTTP POST e armazena no SQLite
 - **Interface Web**: Dashboard para visualização dos dados em tempo real
 - **Docker**: Containerização para deploy fácil
@@ -36,8 +38,10 @@ ESP8266 + DHT22 → WiFi → Flask API → SQLite → Interface Web
 - **Bootstrap** - Framework CSS responsivo
 
 ### IoT
-- **ESP8266** - Microcontrolador WiFi
+- **ESP8266** - Microcontrolador WiFi (versão básica)
+- **ESP32-C3** - Microcontrolador WiFi avançado com OLED
 - **DHT22** - Sensor de temperatura e umidade
+- **OLED SSD1306 0.96"** - Display para ESP32-C3
 - **Arduino IDE** - Desenvolvimento do firmware
 
 ### DevOps
@@ -49,29 +53,29 @@ ESP8266 + DHT22 → WiFi → Flask API → SQLite → Interface Web
 ## 📁 Estrutura do Projeto
 
 ```
-esp8266-dht22/
+kennedy-renan-esp8266-sht22/
 ├── README.md
 ├── docker-compose.yml
 ├── .github/
 │   └── workflows/
 │       └── docker-build.yml
-├── app/
+├── app/                          # Aplicação Flask
 │   ├── app.py
 │   ├── models.py
 │   ├── requirements.txt
 │   ├── static/
-│   │   ├── css/
-│   │   ├── js/
-│   │   └── images/
 │   ├── templates/
-│   │   ├── base.html
-│   │   ├── dashboard.html
-│   │   └── index.html
 │   └── database/
-│       └── sensor_data.db
-└── esp8266/
-    ├── esp8266_dht22.ino
-    ├── config.h
+├── esp8266/                      # Firmware ESP8266
+│   ├── esp8266_dht22.ino
+│   ├── config.h
+│   ├── INSTRUCOES.md
+│   └── README.md
+└── esp32c3/                      # Firmware ESP32-C3
+    ├── esp32c3_dht22_oled_complete.ino
+    ├── esp32c3_dht22_oled_config.ino
+    ├── esp32c3_dht22_oled.ino
+    ├── INSTRUCOES_ESP32C3.md
     └── README.md
 ```
 
@@ -81,9 +85,9 @@ esp8266-dht22/
 
 - Python 3.8+
 - Docker e Docker Compose
-- Arduino IDE (para ESP8266)
-- NodeMCU ESP8266
-- Sensor DHT22
+- Arduino IDE (para ESP8266/ESP32-C3)
+- **ESP8266**: NodeMCU ESP8266 + Sensor DHT22
+- **ESP32-C3**: ESP32-C3 + Sensor DHT22 + OLED SSD1306 0.96"
 
 ### 1. Clone o Repositório
 
@@ -102,16 +106,28 @@ python app.py
 
 A aplicação estará disponível em: `http://localhost:5005`
 
-### 3. Configuração do ESP8266
+### 3. Configuração do Hardware
 
+#### Para ESP8266 (Básico):
 1. Abra o Arduino IDE
 2. Instale as bibliotecas necessárias:
    - ESP8266WiFi
    - DHT sensor library
    - ArduinoJson
-3. Configure as credenciais WiFi no arquivo `config.h`
+3. Configure as credenciais WiFi no arquivo `esp8266/config.h`
 4. Configure o endpoint da API no código
 5. Faça upload do código para o ESP8266
+
+#### Para ESP32-C3 (Avançado):
+1. Abra o Arduino IDE
+2. Instale as bibliotecas necessárias:
+   - DHT sensor library
+   - Adafruit GFX Library
+   - Adafruit SSD1306
+   - ArduinoJson
+3. **Use o código `esp32c3_dht22_oled_complete.ino`** (recomendado)
+4. Faça upload do código para o ESP32-C3
+5. **Configure via web**: Conecte-se à rede `ESP32-C3-Config` e acesse `http://192.168.4.1`
 
 ### 4. Deploy com Docker
 
@@ -165,12 +181,24 @@ Retorna o último registro de cada sensor
 - ✅ Interface responsiva
 - ✅ Exportação de dados (CSV/JSON)
 
-### Sistema IoT
+### Sistema IoT - ESP8266 (Básico)
+- ✅ Coleta automática de dados
+- ✅ Reconexão automática WiFi
+- ✅ Envio de dados via HTTP POST
+- ✅ Indicadores LED de status
+- ❌ Configuração hardcoded
+
+### Sistema IoT - ESP32-C3 (Avançado)
 - ✅ Coleta automática de dados (configurável)
 - ✅ Reconexão automática WiFi
 - ✅ Envio de dados via HTTP POST
 - ✅ Indicadores LED de status
-- ✅ Configuração via web interface
+- ✅ **Configuração web completa**
+- ✅ **Display OLED 0.96" em tempo real**
+- ✅ **GPIOs configuráveis**
+- ✅ **Intervalos configuráveis**
+- ✅ **Servidor configurável**
+- ✅ **Sistema robusto com fallback**
 
 ### Monitoramento
 - ✅ Alertas por email/SMS (futuro)
